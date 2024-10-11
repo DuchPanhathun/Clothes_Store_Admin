@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import CrudUser from "../components/layouts/curd_user"
 import CrudBanner from "../components/layouts/crud_banner"
 import CrudBlog from "../components/layouts/curd_blog"
+import ItemForSale from "../components/layouts/item_for_sale"
 
 const DashboardPage = () => {
   const [activeSection, setActiveSection] = useState('dashboard')
@@ -36,19 +37,7 @@ const DashboardPage = () => {
       case 'item-for-sale':
         return (
           <div className="bg-white border-b p-3 border-gray-200">
-            item
-          </div>
-        )
-      case 'contact-us':
-        return (
-          <div className="bg-white border-b p-3 border-gray-200">
-            contact-us
-          </div>
-        )
-      case 'about-us':
-        return (
-          <div className="bg-white border-b p-3 border-gray-200">
-            about-us
+            <ItemForSale/>
           </div>
         )
       default:
@@ -108,22 +97,6 @@ const DashboardPage = () => {
             onMouseLeave={() => handleNavHover(null)}
           >
             Item For Sale
-          </button>
-          <button
-            className={`text-left py-2 px-4 ${activeSection === 'contact-us' ? 'border-b-2 border-blue-500' : ''} ${hoverSection === 'contact-us' ? 'bg-gray-100' : ''}`}
-            onClick={() => handleNavClick('contact-us')}
-            onMouseEnter={() => handleNavHover('contact-us')}
-            onMouseLeave={() => handleNavHover(null)}
-          >
-            Contact Us
-          </button>
-          <button
-            className={`text-left py-2 px-4 ${activeSection === 'about-us' ? 'border-b-2 border-blue-500' : ''} ${hoverSection === 'about-us' ? 'bg-gray-100' : ''}`}
-            onClick={() => handleNavClick('about-us')}
-            onMouseEnter={() => handleNavHover('about-us')}
-            onMouseLeave={() => handleNavHover(null)}
-          >
-            About Us
           </button>
         </nav>
       </div>
