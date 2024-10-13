@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useAuth } from '../hooks/useAuth'
 import CrudUser from "../components/layouts/curd_user"
 import CrudBanner from "../components/layouts/crud_banner"
 import CrudBlog from "../components/layouts/curd_blog"
@@ -7,6 +9,22 @@ import ItemForSale from "../components/layouts/item_for_sale"
 const DashboardPage = () => {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [hoverSection, setHoverSection] = useState(null)
+  const { user, isAdmin, loading, isAuthenticated, signOut } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && (!isAuthenticated || !isAdmin)) {
+      router.push('/login')
+    }
+  }, [isAuthenticated, isAdmin, loading, router])
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  if (!isAuthenticated || !isAdmin) {
+    return null // Don't render anything while redirecting
+  }
 
   const renderContent = () => {
     switch (activeSection) {
@@ -53,6 +71,15 @@ const DashboardPage = () => {
     setHoverSection(section)
   }
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <div className="flex bg-gray-100">
       {/* Sidebar */}
@@ -97,6 +124,12 @@ const DashboardPage = () => {
             onMouseLeave={() => handleNavHover(null)}
           >
             Item For Sale
+          </button>
+          <button
+            className="text-left py-2 px-4 mt-auto text-red-600 hover:bg-red-100"
+            onClick={handleSignOut}
+          >
+            Sign Out
           </button>
         </nav>
       </div>
