@@ -22,4 +22,21 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-export { app, auth, db, storage};
+// Set up security rules
+const setupSecurityRules = async () => {
+  try {
+    // Firestore rules
+    await db.settings({
+      ignoreUndefinedProperties: true,
+    });
+
+    // Storage rules
+    await storage.setCustomAuthDomain(`${firebaseConfig.projectId}.firebaseapp.com`);
+  } catch (error) {
+    console.error("Error setting up security rules:", error);
+  }
+};
+
+setupSecurityRules();
+
+export { app, auth, db, storage };

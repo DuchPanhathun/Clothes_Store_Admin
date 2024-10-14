@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config'; // Adjust this import based on your Firebase setup
 import { useAuth } from '../hooks/useAuth';
+import Link from 'next/link';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -107,6 +108,12 @@ const LoginPage = () => {
             </button>
           </div>
         </form>
+        <div className="text-sm text-center">
+          Not yet have an account?{' '}
+          <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Sign Up
+          </Link>
+        </div>
       </div>
     </div>
   );

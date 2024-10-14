@@ -7,11 +7,23 @@ export const signUp = async (email: string, password: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Create a user document in Firestore
+    // Create a user document in Firestore with additional fields
     await setDoc(doc(db, 'users', user.uid), {
       email: user.email,
       createdAt: serverTimestamp(),
-      isadmin: false  // Set isadmin to false by default
+      isadmin: false,
+      firstName: '',
+      lastName: '',
+      address: '',
+      city: '',
+      phoneNumber: '',
+      paymentMethod: {
+        nameOnCard: '',
+        cardNumber: '',
+        expMonth: '',
+        expYear: '',
+        cvv: ''
+      }
     });
 
     console.log('User created successfully:', user.email);

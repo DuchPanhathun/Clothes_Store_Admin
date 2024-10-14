@@ -1,14 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { db, storage } from "../../firebase/config";
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const CrudBlog = () => {
     const [blogPosts, setBlogPosts] = useState([]);
     const [newBlog, setNewBlog] = useState({
+        id: null,
         title: "",
         detail: "",
         coverImage: null,
         additionalPhotos: [],
         additionalDetails: "",
     });
+    const [isEditing, setIsEditing] = useState(false);
+
+    useEffect(() => {
+        fetchBlogPosts();
+    }, []);
+
+    const fetchBlogPosts = async () => {
+        const querySnapshot = await getDocs(collection(db, "blogPosts"));
+        const posts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBlogPosts(posts);
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -23,25 +38,88 @@ const CrudBlog = () => {
         setNewBlog(prev => ({ ...prev, additionalPhotos: [...prev.additionalPhotos, ...e.target.files] }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setBlogPosts(prev => [...prev, newBlog]);
+        try {
+            let coverImageUrl = newBlog.coverImage;
+            if (newBlog.coverImage instanceof File) {
+                const coverImageRef = ref(storage, `coverImages/${newBlog.coverImage.name}`);
+                await uploadBytes(coverImageRef, newBlog.coverImage);
+                coverImageUrl = await getDownloadURL(coverImageRef);
+            }
+
+            const additionalPhotoUrls = await Promise.all(
+                newBlog.additionalPhotos.map(async (photo) => {
+                    if (photo instanceof File) {
+                        const photoRef = ref(storage, `additionalPhotos/${photo.name}`);
+                        await uploadBytes(photoRef, photo);
+                        return getDownloadURL(photoRef);
+                    }
+                    return photo;
+                })
+            );
+
+            const blogData = {
+                title: newBlog.title,
+                detail: newBlog.detail,
+                coverImage: coverImageUrl,
+                additionalPhotos: additionalPhotoUrls,
+                additionalDetails: newBlog.additionalDetails,
+                updatedAt: new Date(),
+            };
+
+            if (isEditing) {
+                await updateDoc(doc(db, "blogPosts", newBlog.id), blogData);
+            } else {
+                blogData.createdAt = new Date();
+                await addDoc(collection(db, "blogPosts"), blogData);
+            }
+
+            fetchBlogPosts();
+            resetForm();
+        } catch (error) {
+            console.error("Error adding/updating blog post: ", error);
+        }
+    };
+
+    const handleEdit = (post) => {
         setNewBlog({
+            id: post.id,
+            title: post.title,
+            detail: post.detail,
+            coverImage: post.coverImage,
+            additionalPhotos: post.additionalPhotos,
+            additionalDetails: post.additionalDetails,
+        });
+        setIsEditing(true);
+    };
+
+    const resetForm = () => {
+        setNewBlog({
+            id: null,
             title: "",
             detail: "",
             coverImage: null,
             additionalPhotos: [],
             additionalDetails: "",
         });
+        setIsEditing(false);
     };
 
-    const handleDelete = (index) => {
-        setBlogPosts(prev => prev.filter((_, i) => i !== index));
+    const handleDelete = async (id) => {
+        try {
+            await deleteDoc(doc(db, "blogPosts", id));
+            fetchBlogPosts();
+        } catch (error) {
+            console.error("Error deleting blog post: ", error);
+        }
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Blog Management</h2>
+        <div className="max-w-4xl mx-auto p-6 bg-white">
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">
+                {isEditing ? "Edit Blog Post" : "Create New Blog Post"}
+            </h2>
             
             <form onSubmit={handleSubmit} className="mb-8 space-y-4">
                 <div>
@@ -119,19 +197,26 @@ const CrudBlog = () => {
                 </div>
                 
                 <button type="submit" className="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:blue-500 focus:ring-offset-2">
-                    Upload Blog
+                    {isEditing ? "Update Blog" : "Upload Blog"}
                 </button>
+                
+                {isEditing && (
+                    <button type="button" onClick={resetForm} className="w-full bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:gray-500 focus:ring-offset-2 mt-2">
+                        Cancel Edit
+                    </button>
+                )}
             </form>
             
             {blogPosts.length > 0 && (
                 <div>
                     <h3 className="text-xl font-semibold mb-4 text-gray-700">Uploaded Blogs:</h3>
                     <ul className="space-y-3">
-                        {blogPosts.map((post, index) => (
-                            <li key={index} className="flex items-center justify-between bg-gray-100 p-3 rounded-md">
+                        {blogPosts.map((post) => (
+                            <li key={post.id} className="flex items-center justify-between bg-gray-100 p-3 rounded-md">
                                 <span className="text-gray-800">{post.title}</span>
                                 <div className="space-x-2">
-                                    <button onClick={() => handleDelete(index)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-300">Delete</button>
+                                    <button onClick={() => handleEdit(post)} className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition duration-300">Edit</button>
+                                    <button onClick={() => handleDelete(post.id)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-300">Delete</button>
                                 </div>
                             </li>
                         ))}
@@ -139,7 +224,7 @@ const CrudBlog = () => {
                 </div>
             )}
         </div>
-    )
+    );
 }
 
 export default CrudBlog;

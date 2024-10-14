@@ -1,69 +1,192 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getFirestore, collection, addDoc, query, orderBy, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { app } from '../../firebase/config';
 
 const CrudBanner = () => {
-    const [bannerFiles, setBannerFiles] = useState([]);
+    const [banners, setBanners] = useState([]);
+    const [title, setTitle] = useState("");
+    const [image, setImage] = useState(null);
+    const [error, setError] = useState("");
+    const [editingBanner, setEditingBanner] = useState(null);
 
-    const handleFileUpload = (event) => {
-        const newFiles = Array.from(event.target.files);
-        setBannerFiles(prevFiles => [...prevFiles, ...newFiles]);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    useEffect(() => {
+        fetchBanners();
+    }, []);
+
+    const fetchBanners = async () => {
+        const bannersRef = collection(db, 'banners');
+        const q = query(bannersRef, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        const bannerList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBanners(bannerList);
     };
 
-    const handleDelete = (index) => {
-        setBannerFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-    };
+    const handleCreateBanner = async (e) => {
+        e.preventDefault();
+        try {
+            if (!title.trim() || !image) {
+                throw new Error("Please provide both a title and an image");
+            }
 
-    const handleEdit = (index, event) => {
-        const newFile = event.target.files[0];
-        if (newFile) {
-            setBannerFiles(prevFiles => {
-                const newFiles = [...prevFiles];
-                newFiles[index] = newFile;
-                return newFiles;
+            const storageRef = ref(storage, `banners/${image.name}`);
+            await uploadBytes(storageRef, image);
+            const imageUrl = await getDownloadURL(storageRef);
+
+            await addDoc(collection(db, "banners"), {
+                title: title.trim(),
+                imageUrl,
+                createdAt: new Date()
             });
+
+            setTitle("");
+            setImage(null);
+            fetchBanners();
+            setError("");
+        } catch (error) {
+            console.error("Error creating banner:", error);
+            setError("Failed to create banner: " + error.message);
         }
     };
 
-    const handleRemoveAll = () => {
-        setBannerFiles([]);
+    const handleDeleteBanner = async (bannerId, imageUrl) => {
+        try {
+            await deleteDoc(doc(db, "banners", bannerId));
+            const imageRef = ref(storage, imageUrl);
+            await deleteObject(imageRef);
+            fetchBanners();
+            setError("");
+        } catch (error) {
+            console.error("Error deleting banner:", error);
+            setError("Failed to delete banner: " + error.message);
+        }
+    };
+
+    const handleUpdateBanner = async (e) => {
+        e.preventDefault();
+        try {
+            if (!editingBanner.title.trim()) {
+                throw new Error("Banner title cannot be empty");
+            }
+
+            const bannerRef = doc(db, "banners", editingBanner.id);
+            let updateData = { title: editingBanner.title.trim() };
+
+            if (image) {
+                const storageRef = ref(storage, `banners/${image.name}`);
+                await uploadBytes(storageRef, image);
+                const newImageUrl = await getDownloadURL(storageRef);
+                updateData.imageUrl = newImageUrl;
+
+                // Delete old image
+                const oldImageRef = ref(storage, editingBanner.imageUrl);
+                await deleteObject(oldImageRef);
+            }
+
+            await updateDoc(bannerRef, updateData);
+            setEditingBanner(null);
+            setImage(null);
+            fetchBanners();
+            setError("");
+        } catch (error) {
+            console.error("Error updating banner:", error);
+            setError("Failed to update banner: " + error.message);
+        }
     };
 
     return (
-        <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800">Banner Management</h2>
+        <div className="container mx-auto p-4">
+            <h1 className="text-2xl font-bold mb-4">Banner Management</h1>
             
-            {bannerFiles.length > 0 && (
-                <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Uploaded Banners:</h3>
-                    <ul className="space-y-3">
-                        {bannerFiles.map((file, index) => (
-                            <li key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                                <span className="text-gray-600">{file.name}</span>
-                                <div className="flex space-x-2">
-                                    <label className="cursor-pointer bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition duration-300">
-                                        Edit
-                                        <input type="file" accept="image/*" onChange={(e) => handleEdit(index, e)} className="hidden" />
-                                    </label>
-                                    <button onClick={() => handleDelete(index)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-300">
-                                        Delete
-                                    </button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+            {/* Create Banner Form */}
+            <div className="mb-8 bg-white p-4 rounded shadow">
+                <h2 className="text-xl font-semibold mb-2">Create Banner</h2>
+                <form onSubmit={handleCreateBanner} className="space-y-4">
+                    <input
+                        type="text"
+                        placeholder="Banner Title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        required
+                    />
+                    <input
+                        type="file"
+                        onChange={(e) => setImage(e.target.files[0])}
+                        className="w-full p-2 border rounded"
+                        accept="image/*"
+                        required
+                    />
+                    <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Add Banner
+                    </button>
+                </form>
+                {error && <p className="text-red-500 mt-2">{error}</p>}
+            </div>
+            
+            {/* Banner List */}
+            <div className="bg-white p-4 rounded shadow">
+                <h2 className="text-xl font-semibold mb-2">Banner List</h2>
+                <ul className="divide-y">
+                    {banners.map((banner) => (
+                        <li key={banner.id} className="py-4 flex justify-between items-center">
+                            <div>
+                                <p className="font-medium">{banner.title}</p>
+                                <img src={banner.imageUrl} alt={banner.title} className="w-32 h-auto mt-2" />
+                            </div>
+                            <div className="space-x-2">
+                                <button
+                                    onClick={() => setEditingBanner(banner)}
+                                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteBanner(banner.id, banner.imageUrl)}
+                                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
+            {/* Edit Banner Modal */}
+            {editingBanner && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                        <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Edit Banner</h3>
+                        <form onSubmit={handleUpdateBanner} className="space-y-4">
+                            <input
+                                type="text"
+                                placeholder="Banner Title"
+                                value={editingBanner.title}
+                                onChange={(e) => setEditingBanner({...editingBanner, title: e.target.value})}
+                                className="w-full p-2 border rounded"
+                                required
+                            />
+                            <input
+                                type="file"
+                                onChange={(e) => setImage(e.target.files[0])}
+                                className="w-full p-2 border rounded"
+                                accept="image/*"
+                            />
+                            <img src={editingBanner.imageUrl} alt={editingBanner.title} className="w-full h-auto mt-2" />
+                            <div className="flex justify-end space-x-2">
+                                <button type="button" onClick={() => setEditingBanner(null)} className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-                <label className="flex-1 cursor-pointer bg-blue-500 text-white text-center py-2 px-4 rounded-md hover:bg-blue-600 transition duration-300">
-                    Upload Banners
-                    <input type="file" accept="image/*" onChange={handleFileUpload} multiple className="hidden" />
-                </label>
-                <button onClick={handleRemoveAll} className="flex-1 bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition duration-300">
-                    Remove All Banners
-                </button>
-            </div>
         </div>
-    )
-}
+    );
+};
 
 export default CrudBanner;
