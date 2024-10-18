@@ -32,3 +32,4 @@ coverage/
 
 # GitHub Actions
 .github/
+.vercel

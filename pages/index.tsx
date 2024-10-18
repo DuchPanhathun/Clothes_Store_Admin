@@ -7,13 +7,16 @@ import CrudBlog from "../components/layouts/crud_blog"
 import ItemForSale from "../components/layouts/item_for_sale"
 import ItemList from "../components/layouts/item_list"
 import Image from 'next/image'
-import logo from '../public/logo.svg'
+import { ItemForSaleType } from '../types/item';
+
+// Add this type definition at the top of the file, after the imports
+type SectionType = 'dashboard' | 'crud-user' | 'Upload-Banner' | 'upload-blog' | 'item-for-sale';
 
 const DashboardPage = () => {
-  const [activeSection, setActiveSection] = useState('dashboard')
-  const [hoverSection, setHoverSection] = useState(null)
-  const { user, isAdmin, loading, isAuthenticated, signOut } = useAuth()
-  const router = useRouter()
+const [activeSection, setActiveSection] = useState<SectionType>('dashboard')
+const [hoverSection, setHoverSection] = useState<SectionType | null>(null)
+const { user, isAdmin, loading, isAuthenticated, signOut } = useAuth()
+const router = useRouter()
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || !isAdmin)) {
@@ -58,7 +61,14 @@ const DashboardPage = () => {
       case 'item-for-sale':
         return (
           <div className="bg-white border-b p-3 border-gray-200">
-            <ItemForSale/>
+            <ItemForSale
+              item={{} as ItemForSaleType}
+              onUpdate={(updatedItem: ItemForSaleType) => {
+                console.log('Item updated:', updatedItem);
+                // Handle the update logic here
+              }}
+              onCancel={() => setActiveSection('dashboard')}
+            />
           </div>
         )
       default:
@@ -66,11 +76,11 @@ const DashboardPage = () => {
     }
   }
 
-  const handleNavClick = (section) => {
+  const handleNavClick = (section: SectionType) => {
     setActiveSection(section)
   }
 
-  const handleNavHover = (section) => {
+  const handleNavHover = (section: SectionType | null) => {
     setHoverSection(section)
   }
 

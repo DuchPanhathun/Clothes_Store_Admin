@@ -10,6 +10,9 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
         promoCodes: item.promoCodes || [{ code: "", discount: "" }],
         images: item.images || [],
         additionalCareDetails: item.additionalCareDetails || '',
+        colors: item.colors || [],
+        sizes: item.sizes || [],
+        careDetails: item.careDetails || [], // Ensure careDetails is initialized
     } : {
         brandName: "",
         type: "",
@@ -19,13 +22,13 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
         sizes: [],
         materialDetail: "",
         promoCodes: [{ code: "", discount: "" }],
-        careDetails: [],
+        careDetails: [], // Initialize careDetails as an empty array
         additionalCareDetails: '',
         maxTemp: "",
         maxTempF: "",
         deliveryStartDate: "",
         deliveryEndDate: "",
-        images: [], // Array to store multiple images
+        images: [],
     });
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [currentColor, setCurrentColor] = useState("#000000");
@@ -244,7 +247,7 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
                     <div className="block">
                         <span className="text-gray-700">Colors Available:</span>
                         <div className="mt-1 flex flex-wrap gap-2">
-                            {formData.colors.map((color) => (
+                            {formData.colors && formData.colors.map((color) => (
                                 <div key={color} className="flex items-center">
                                     <div
                                         style={{
@@ -296,7 +299,7 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
                                     <input
                                         type="checkbox"
                                         value={size}
-                                        checked={formData.sizes.includes(size)}
+                                        checked={formData.sizes && formData.sizes.includes(size)}
                                         onChange={handleSizeChange}
                                         className="form-checkbox h-5 w-5 text-blue-600"
                                     />
@@ -349,7 +352,7 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
                             type="checkbox"
                             name="careDetails"
                             value="Do not use bleach"
-                            checked={formData.careDetails.includes("Do not use bleach")}
+                            checked={formData.careDetails && formData.careDetails.includes("Do not use bleach")}
                             onChange={handleCareDetailsChange}
                             className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
                         />
@@ -360,7 +363,7 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
                             type="checkbox"
                             name="careDetails"
                             value="Do not tumble dry"
-                            checked={formData.careDetails.includes("Do not tumble dry")}
+                            checked={formData.careDetails && formData.careDetails.includes("Do not tumble dry")}
                             onChange={handleCareDetailsChange}
                             className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
                         />
@@ -371,7 +374,7 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
                             type="checkbox"
                             name="careDetails"
                             value="Dry clean with tetrachlorethylene"
-                            checked={formData.careDetails.includes("Dry clean with tetrachlorethylene")}
+                            checked={formData.careDetails && formData.careDetails.includes("Dry clean with tetrachlorethylene")}
                             onChange={handleCareDetailsChange}
                             className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
                         />
@@ -382,7 +385,7 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
                             type="checkbox"
                             name="careDetails"
                             value="Iron at a maximum temperature"
-                            checked={formData.careDetails.includes("Iron at a maximum temperature")}
+                            checked={formData.careDetails && formData.careDetails.includes("Iron at a maximum temperature")}
                             onChange={handleCareDetailsChange}
                             className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-offset-0 focus:ring-indigo-200 focus:ring-opacity-50"
                         />
