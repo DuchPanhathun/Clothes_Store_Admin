@@ -4,7 +4,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firesto
 import { ref, deleteObject } from "firebase/storage";
 import ItemForSale from './item_for_sale';
 
-const ItemList = () => {
+const ItemList = ({ onAddItem }) => {
     const [items, setItems] = useState([]);
     const [editingItem, setEditingItem] = useState(null);
 
@@ -39,15 +39,13 @@ const ItemList = () => {
     const handleDelete = async (item) => {
         if (window.confirm('Are you sure you want to delete this item?')) {
             try {
-                // Delete the document from Firestore
                 await deleteDoc(doc(db, 'items', item.id));
-
-                // Delete the image from Storage if it exists
-                if (item.image) {
-                    const imageRef = ref(storage, item.image);
-                    await deleteObject(imageRef);
+                if (item.images && item.images.length > 0) {
+                    for (let imageUrl of item.images) {
+                        const imageRef = ref(storage, imageUrl);
+                        await deleteObject(imageRef);
+                    }
                 }
-
                 fetchItems();
                 alert('Item deleted successfully!');
             } catch (error) {
@@ -60,6 +58,9 @@ const ItemList = () => {
     return (
         <div className="container mx-auto p-4">
             <h2 className="text-2xl font-bold mb-6">Items for Sale</h2>
+            <button onClick={onAddItem} className="mb-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                Add New Item
+            </button>
             {editingItem ? (
                 <ItemForSale item={editingItem} onUpdate={handleUpdate} onCancel={() => setEditingItem(null)} />
             ) : (
@@ -67,7 +68,9 @@ const ItemList = () => {
                     {items.map((item) => (
                         <div key={item.id} className="border rounded-lg p-4 shadow-md">
                             <h3 className="text-xl font-semibold mb-2">{item.brandName} - {item.type}</h3>
-                            {item.image && <img src={item.image} alt={item.type} className="w-full h-48 object-cover mb-2" />}
+                            {item.images && item.images.length > 0 && (
+                                <img src={item.images[0]} alt={item.type} className="w-full h-48 object-cover mb-2" />
+                            )}
                             <p className="mb-2">Price: ${item.price}</p>
                             <p className="mb-2">Quantity: {item.quantity}</p>
                             <div className="flex justify-between mt-4">

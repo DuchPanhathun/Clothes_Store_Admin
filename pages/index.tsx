@@ -8,6 +8,8 @@ import ItemForSale from "../components/layouts/item_for_sale"
 import ItemList from "../components/layouts/item_list"
 import Image from 'next/image'
 import { ItemForSaleType } from '../types/item';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 // Add this type definition at the top of the file, after the imports
 type SectionType = 'dashboard' | 'crud-user' | 'Upload-Banner' | 'upload-blog' | 'item-for-sale';
@@ -37,7 +39,7 @@ const router = useRouter()
       case 'dashboard':
         return (
           <div className="bg-white border-b p-3 border-gray-200">
-            <ItemList/>
+            <ItemList onAddItem={() => setActiveSection('item-for-sale')} />
           </div>
         )
       case 'crud-user':
@@ -62,10 +64,17 @@ const router = useRouter()
         return (
           <div className="bg-white border-b p-3 border-gray-200">
             <ItemForSale
-              item={{} as ItemForSaleType}
-              onUpdate={(updatedItem: ItemForSaleType) => {
-                console.log('Item updated:', updatedItem);
-                // Handle the update logic here
+              item={null}
+              onUpdate={async (newItem: ItemForSaleType) => {
+                try {
+                  const docRef = await addDoc(collection(db, "items"), newItem);
+                  console.log("Document written with ID: ", docRef.id);
+                  alert('Item added successfully!');
+                  setActiveSection('dashboard');
+                } catch (error) {
+                  console.error("Error adding document: ", error);
+                  alert('Error adding item. Please try again.');
+                }
               }}
               onCancel={() => setActiveSection('dashboard')}
             />

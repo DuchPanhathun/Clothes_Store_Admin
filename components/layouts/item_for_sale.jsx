@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { db, storage } from "../../firebase/config"; // Import Firebase config
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { SketchPicker } from 'react-color'; // Make sure to install react-color: npm install react-color
 
@@ -137,9 +137,9 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
             let imageUrls = [];
             for (let image of formData.images) {
                 if (image instanceof File) {
-                    const storageRef = ref(storage, `items/${image.name}`);
-                    await uploadBytes(storageRef, image);
-                    const url = await getDownloadURL(storageRef);
+                    const storageRef = ref(storage, `items/${Date.now()}_${image.name}`);
+                    const snapshot = await uploadBytes(storageRef, image);
+                    const url = await getDownloadURL(snapshot.ref);
                     imageUrls.push(url);
                 } else {
                     // If it's already a URL (for editing existing items)
@@ -150,18 +150,21 @@ const ItemForSale = ({ item, onUpdate, onCancel }) => {
             const itemData = {
                 ...formData,
                 images: imageUrls,
-                updatedAt: new Date(),
+                updatedAt: new Date().toISOString(),
             };
 
-            if (item) {
+            if (item && item.id) {
                 // Update existing item
-                await onUpdate(itemData);
+                const itemRef = doc(db, "items", item.id);
+                await updateDoc(itemRef, itemData);
+                console.log("Document updated with ID: ", item.id);
             } else {
                 // Add new item
                 const docRef = await addDoc(collection(db, "items"), itemData);
                 console.log("Document written with ID: ", docRef.id);
-                alert("Item uploaded successfully!");
             }
+
+            alert(item ? "Item updated successfully!" : "Item uploaded successfully!");
 
             // Reset form after submission
             setFormData({
